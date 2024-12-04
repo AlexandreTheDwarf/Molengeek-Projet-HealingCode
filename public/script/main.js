@@ -169,28 +169,65 @@ const cimetière = {
 // Chat miaulant toutes les 2 secondes
 let chat = {
     nom: "chat",
+    intervalle: null, // Variable pour garder la référence de l'intervalle
+
     miauler() {
-        if ((doctor.cabinet.length) > 0){
-            setInterval(() => {
+        if (SalleAttente.length > 0 && !this.intervalle) {
+            this.intervalle = setInterval(() => {
                 console.log("Miaou !");
                 audio.play();
-            }, 2000);
-        } 
+            }, 2000);  // Miaule toutes les 2 secondes
+        } else if (SalleAttente.length === 0 && this.intervalle) {
+            clearInterval(this.intervalle); // Arrêter le miaou si la salle d'attente est vide
+            this.intervalle = null;
+        }
     }
 };
 
-// Simulation du déroulement
-mettreAJourTableau("salle-attente", SalleAttente); // Initialisation
-chat.miauler(); 
+// Fonction avec des délais
+const simulationAvecDelais = () => {
+    mettreAJourTableau("salle-attente", SalleAttente); // Initialisation
+    chat.miauler();  // Lancer le miaou
 
-while (SalleAttente.length > 0) {
-    let patient = SalleAttente.shift(); // Prend et retire le premier patient
-    patient.seRendre("cabinet", SalleAttente, doctor.cabinet);
-    doctor.accueillir(patient);
-    doctor.soigner(patient);
-    doctor.faireSortir(patient);
-    patient.seRendre("pharmacie", doctor.cabinet, Pharmacie);
-    pharmacie.accueillir(patient);
-}
+    const traiterProchainPatient = () => {
+        if (SalleAttente.length === 0) {
+            ajouterMessage("Tous les patients ont été traités !");
+            chat.miauler();  // Vérifier si la salle d'attente est vide et arrêter le miaou
+            return;
+        }
 
-ajouterMessage("Tous les patients ont été traités !");
+        // Prend et retire le premier patient
+        const patient = SalleAttente.shift();
+
+        // Étape 1 : Le patient se rend au cabinet
+        setTimeout(() => {
+            patient.seRendre("cabinet", SalleAttente, doctor.cabinet);
+            doctor.accueillir(patient);
+
+            // Étape 2 : Le docteur soigne le patient
+            setTimeout(() => {
+                doctor.soigner(patient);
+
+                // Étape 3 : Le patient sort du cabinet
+                setTimeout(() => {
+                    doctor.faireSortir(patient);
+                    patient.seRendre("pharmacie", doctor.cabinet, Pharmacie);
+
+                    // Étape 4 : Le patient va à la pharmacie
+                    setTimeout(() => {
+                        pharmacie.accueillir(patient);
+
+                        // Passe au prochain patient après les traitements
+                        traiterProchainPatient();
+                    }, 1500); // Délai pour aller à la pharmacie
+                }, 1500); // Délai pour sortir du cabinet
+            }, 2000); // Délai pour être soigné
+        }, 1000); // Délai pour se rendre au cabinet
+    };
+
+    traiterProchainPatient(); // Lancer la simulation pour le premier patient
+};
+
+// Lancer la simulation avec des délais
+simulationAvecDelais();
+
